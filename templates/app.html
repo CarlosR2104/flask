@@ -1,34 +1,85 @@
-from flask import Flask
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-from flask import render_template
-from flask import request
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
 
-import pusher
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
 
-app = Flask(__name__)
+    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
 
-@app.route("/")
-def index():
-    return render_template("app.html")
+    <title>Reservas</title>
+</head>
+<body>
+    <div class="container">
+      <h1>Lista de Reservas</h1>
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Nombre y Apellido</th>
+            <th>Teléfono</th>
+            <th>Fecha</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyReservas"></tbody>
+      </table>
+    </div>
 
-@app.route("/alumnos")
-def alumnos():
-    return render_template("alumnos.html")
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 
-@app.route("/alumnos/guardar", methods=["POST"])
-def alumnosGuardar():
-    matricula      = request.form["txtMatriculaFA"]
-    nombreapellido = request.form["txtNombreApellidoFA"]
-    return f"Matrícula: {matricula} Nombre y Apellido: {nombreapellido}"
+    <script>
+        window.addEventListener("load", function (event) {
+            // Realizamos un SELECT a la BD con FLASK y lo imprimimos en el TBODY
+            function buscar() {
+                $.get("/reservas/buscar", function (respuesta) {
+                    // Imprimimos la respuesta de FLASK con SELECT para saber cómo acceder a cada valor y colocarlos en el TBODY
+                    // console.log(respuesta)
 
-@app.route("/evento", methods=["GET"])
-def evento():
-    pusher_client = pusher.Pusher(
-        app_id="1714541",
-        key="cda1cc599395d699a2af",
-        secret="9e9c00fc36600060d9e2",
-        cluster="us2",
-        ssl=True
-    )
-    
-    pusher_client.trigger("conexion", "evento", request.args)
+                    $("#tbodyReservas").html("")
+
+                    for (var x in respuesta) {
+                        var reserva = respuesta[x]
+                        $("#tbodyReservas").append(`<tr>
+                            <td>${reserva[1]}</td>
+                            <td>${reserva[2]}</td>
+                            <td>${reserva[3]}</td>
+                        </tr>`)
+                    }
+                })
+            }
+
+            buscar()
+
+            Pusher.logToConsole = true
+            
+            var pusher = new Pusher("cda1cc599395d699a2af", {
+                cluster: "us2"
+            })
+
+            // Canal ---> Donde se concentran los hilos con los clientes conectados
+            var channel = pusher.subscribe("canalReservas");
+
+            // Evento --> El código que se accionará con la información enviada o el uso del canal
+            channel.bind("nuevaReserva", function (reserva) {
+                // 1. Notificar el evento
+                // alert("Ocurrió un nuevo evento de reserva")
+
+                // 2. Recibir información enviada en el evento
+                // console.log(reserva)
+
+                // 3. Trabajar información enviada por el evento
+                $("#tbodyReservas").prepend(`<tr>
+                    <td>${reserva.nombre_apellido}</td>
+                    <td>${reserva.telefono}</td>
+                    <td>${reserva.fecha}</td>
+                </tr>`)
+
+                // 4. Mandar a llamar otro código luego del evento si es necesario
+                buscar()
+            })
+        })
+    </script>    
+</body>
+</html>
