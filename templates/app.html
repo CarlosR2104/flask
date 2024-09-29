@@ -10,17 +10,17 @@
 
     <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
 
-    <title>Reservas</title>
+    <title>App</title>
 </head>
 <body>
     <div class="container">
-      <h1 class="my-4">Lista de Reservas</h1>
+      <h1>Reservas</h1>
       <table class="table table-sm">
         <thead>
           <tr>
             <th>Nombre y Apellido</th>
             <th>Teléfono</th>
-            <th>Fecha</th>
+            <th>Fecha y Hora</th>
           </tr>
         </thead>
         <tbody id="tbodyReservas"></tbody>
@@ -31,39 +31,48 @@
 
     <script>
         window.addEventListener("load", function (event) {
-            // Función para buscar reservas y mostrarlas en el TBODY
+            // Realizamos un SELECT a la BD con FLASK y lo imprimimos en el TBODY
             function buscar() {
-                $.get("/buscar", function (respuesta) {
-                    $("#tbodyReservas").html("")
+                $.get("/reservas/buscar", function (respuesta) {
+                    // Imprimimos la respuesta de FLASK con SELECT para saber cómo acceder a cada valor y colocarlos en el TBODY
+                    // console.log(respuesta)
+
+                    $("#tbodyReservas").html("");
 
                     for (var x in respuesta) {
-                        var reserva = respuesta[x]
+                        var reserva = respuesta[x];
                         $("#tbodyReservas").append(`<tr>
                             <td>${reserva[1]}</td>
                             <td>${reserva[2]}</td>
                             <td>${reserva[3]}</td>
-                        </tr>`)
+                        </tr>`);
                     }
-                })
+                });
             }
 
-            buscar()
+            buscar();
 
-            // Configuración de Pusher
-            Pusher.logToConsole = true
+            Pusher.logToConsole = true;
             
             var pusher = new Pusher("cda1cc599395d699a2af", {
                 cluster: "us2"
-            })
+            });
 
-            // Canal para las reservas
+            // Canal ---> Donde se concentran los hilos con los clientes conectados
             var channel = pusher.subscribe("canalRegistrosReservas");
 
-            // Evento para manejar nuevas reservas
+            // Evento --> El código que se accionará con la información enviada o el uso del canal
             channel.bind("registroReserva", function (reserva) {
-                buscar() // Volver a cargar las reservas
-            })
-        })
+                // 1. Notificar el evento
+                // alert("Ocurrió el evento")
+
+                // 2. Recibir información enviada en el evento
+                // console.log(reserva)
+
+                // 4. Mandar a llamar otro código luego del evento
+                buscar();
+            });
+        });
     </script>    
 </body>
 </html>
