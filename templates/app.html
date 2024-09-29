@@ -14,7 +14,7 @@
 </head>
 <body>
     <div class="container">
-      <h1>Lista de Reservas</h1>
+      <h1 class="my-4">Lista de Reservas</h1>
       <table class="table table-sm">
         <thead>
           <tr>
@@ -31,12 +31,9 @@
 
     <script>
         window.addEventListener("load", function (event) {
-            // Realizamos un SELECT a la BD con FLASK y lo imprimimos en el TBODY
+            // Función para buscar reservas y mostrarlas en el TBODY
             function buscar() {
-                $.get("/reservas/buscar", function (respuesta) {
-                    // Imprimimos la respuesta de FLASK con SELECT para saber cómo acceder a cada valor y colocarlos en el TBODY
-                    // console.log(respuesta)
-
+                $.get("/buscar", function (respuesta) {
                     $("#tbodyReservas").html("")
 
                     for (var x in respuesta) {
@@ -52,32 +49,19 @@
 
             buscar()
 
+            // Configuración de Pusher
             Pusher.logToConsole = true
             
             var pusher = new Pusher("cda1cc599395d699a2af", {
                 cluster: "us2"
             })
 
-            // Canal ---> Donde se concentran los hilos con los clientes conectados
-            var channel = pusher.subscribe("canalReservas");
+            // Canal para las reservas
+            var channel = pusher.subscribe("canalRegistrosReservas");
 
-            // Evento --> El código que se accionará con la información enviada o el uso del canal
-            channel.bind("nuevaReserva", function (reserva) {
-                // 1. Notificar el evento
-                // alert("Ocurrió un nuevo evento de reserva")
-
-                // 2. Recibir información enviada en el evento
-                // console.log(reserva)
-
-                // 3. Trabajar información enviada por el evento
-                $("#tbodyReservas").prepend(`<tr>
-                    <td>${reserva.nombre_apellido}</td>
-                    <td>${reserva.telefono}</td>
-                    <td>${reserva.fecha}</td>
-                </tr>`)
-
-                // 4. Mandar a llamar otro código luego del evento si es necesario
-                buscar()
+            // Evento para manejar nuevas reservas
+            channel.bind("registroReserva", function (reserva) {
+                buscar() // Volver a cargar las reservas
             })
         })
     </script>    
