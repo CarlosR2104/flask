@@ -2,6 +2,7 @@ from flask import Flask, render_template, request
 import mysql.connector
 import datetime
 import pytz
+import pusher
 
 # Conexión a la base de datos
 con = mysql.connector.connect(
@@ -13,78 +14,43 @@ con = mysql.connector.connect(
 
 app = Flask(__name__)
 
-# Ruta principal
 @app.route("/")
 def index():
-    con.close()
     return render_template("app.html")
 
-# Ruta para mostrar alumnos (ejemplo de vista usando templates)
+# Ejemplo de ruta GET usando templates para mostrar una vista
 @app.route("/alumnos")
 def alumnos():
-    con.close()
     return render_template("alumnos.html")
 
-# Ruta para guardar los datos de la reserva en la tabla tst0_reservad
-@app.route("/reservas/guardar", methods=["GET", "POST"])
+# Ejemplo de ruta POST para guardar información en la tabla tst0_reservas
+@app.route("/reservas/guardar", methods=["POST"])
 def reservasGuardar():
-    if request.method == "POST":
-        if not con.is_connected():
-            con.reconnect()
+    nombre_apellido = request.form["txtNombreApellido"]
+    telefono = request.form["txtTelefono"]
 
-        # Captura de los datos del formulario
-        nombre_apellido = request.form["txtNombreApellido"]
-        telefono = request.form["txtTelefono"]
-        fecha = datetime.datetime.now(pytz.timezone("America/Matamoros"))  # Fecha actual
+    if not con.is_connected():
+        con.reconnect()
 
-        # Inserción en la base de datos
-        cursor = con.cursor()
-        sql = "INSERT INTO tst0_reservad (Nombre_Apellido, Telefono, Fecha) VALUES (%s, %s, %s)"
-        val = (nombre_apellido, telefono, fecha)
-        cursor.execute(sql, val)
-        con.commit()
-
-        # Cierre de conexión
-        con.close()
-
-        # Retorno de mensaje de éxito
-        return f"Reserva guardada: Nombre y Apellido {nombre_apellido}, Teléfono {telefono}, Fecha {fecha}"
+    cursor = con.cursor()
+    sql = "INSERT INTO tst0_reservas (Nombre_Apellido, Telefono, Fecha) VALUES (%s, %s, %s)"
+    fecha = datetime.datetime.now(pytz.timezone("America/Matamoros"))
+    val = (nombre_apellido, telefono, fecha)
+    cursor.execute(sql, val)
+    con.commit()
     
-    elif request.method == "GET":
-        # Captura de datos desde la URL
-        nombre_apellido = request.args.get("Nombre_Apellido")
-        telefono = request.args.get("Telefono")
-        
-        if nombre_apellido and telefono:
-            if not con.is_connected():
-                con.reconnect()
+    con.close()
 
-            fecha = datetime.datetime.now(pytz.timezone("America/Matamoros"))  # Fecha actual
+    return f"Reserva guardada: Nombre y Apellido {nombre_apellido}, Teléfono {telefono}, Fecha {fecha}"
 
-            # Inserción en la base de datos
-            cursor = con.cursor()
-            sql = "INSERT INTO tst0_reservad (Nombre_Apellido, Telefono, Fecha) VALUES (%s, %s, %s)"
-            val = (nombre_apellido, telefono, fecha)
-            cursor.execute(sql, val)
-            con.commit()
-
-            # Cierre de conexión
-            con.close()
-
-            # Retorno de mensaje de éxito
-            return f"Reserva guardada: Nombre y Apellido {nombre_apellido}, Teléfono {telefono}, Fecha {fecha}"
-
-        return "Faltan parámetros en la URL"
-
-# Ruta para buscar registros de reservas
+# Código usado en las prácticas para buscar reservas
 @app.route("/reservas/buscar")
 def reservasBuscar():
     if not con.is_connected():
         con.reconnect()
 
-    # Búsqueda de registros en la tabla tst0_reservad
     cursor = con.cursor()
-    cursor.execute("SELECT * FROM tst0_reservad ORDER BY Id_Reserva DESC")
+    cursor.execute("SELECT * FROM tst0_reservas ORDER BY Id_Reserva DESC")
     registros = cursor.fetchall()
 
     con.close()
