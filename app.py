@@ -26,28 +26,55 @@ def alumnos():
     return render_template("alumnos.html")
 
 # Ruta para guardar los datos de la reserva en la tabla tst0_reservad
-@app.route("/reservas/guardar", methods=["POST"])
+@app.route("/reservas/guardar", methods=["GET", "POST"])
 def reservasGuardar():
-    if not con.is_connected():
-        con.reconnect()
+    if request.method == "POST":
+        if not con.is_connected():
+            con.reconnect()
 
-    # Captura de los datos del formulario
-    nombre_apellido = request.form["txtNombreApellido"]
-    telefono = request.form["txtTelefono"]
-    fecha = datetime.datetime.now(pytz.timezone("America/Matamoros"))  # Fecha actual
+        # Captura de los datos del formulario
+        nombre_apellido = request.form["txtNombreApellido"]
+        telefono = request.form["txtTelefono"]
+        fecha = datetime.datetime.now(pytz.timezone("America/Matamoros"))  # Fecha actual
 
-    # Inserción en la base de datos
-    cursor = con.cursor()
-    sql = "INSERT INTO tst0_reservad (Nombre_Apellido, Telefono, Fecha) VALUES (%s, %s, %s)"
-    val = (nombre_apellido, telefono, fecha)
-    cursor.execute(sql, val)
-    con.commit()
+        # Inserción en la base de datos
+        cursor = con.cursor()
+        sql = "INSERT INTO tst0_reservad (Nombre_Apellido, Telefono, Fecha) VALUES (%s, %s, %s)"
+        val = (nombre_apellido, telefono, fecha)
+        cursor.execute(sql, val)
+        con.commit()
 
-    # Cierre de conexión
-    con.close()
+        # Cierre de conexión
+        con.close()
 
-    # Retorno de mensaje de éxito
-    return f"Reserva guardada: Nombre y Apellido {nombre_apellido}, Teléfono {telefono}, Fecha {fecha}"
+        # Retorno de mensaje de éxito
+        return f"Reserva guardada: Nombre y Apellido {nombre_apellido}, Teléfono {telefono}, Fecha {fecha}"
+    
+    elif request.method == "GET":
+        # Captura de datos desde la URL
+        nombre_apellido = request.args.get("Nombre_Apellido")
+        telefono = request.args.get("Telefono")
+        
+        if nombre_apellido and telefono:
+            if not con.is_connected():
+                con.reconnect()
+
+            fecha = datetime.datetime.now(pytz.timezone("America/Matamoros"))  # Fecha actual
+
+            # Inserción en la base de datos
+            cursor = con.cursor()
+            sql = "INSERT INTO tst0_reservad (Nombre_Apellido, Telefono, Fecha) VALUES (%s, %s, %s)"
+            val = (nombre_apellido, telefono, fecha)
+            cursor.execute(sql, val)
+            con.commit()
+
+            # Cierre de conexión
+            con.close()
+
+            # Retorno de mensaje de éxito
+            return f"Reserva guardada: Nombre y Apellido {nombre_apellido}, Teléfono {telefono}, Fecha {fecha}"
+
+        return "Faltan parámetros en la URL"
 
 # Ruta para buscar registros de reservas
 @app.route("/reservas/buscar")
