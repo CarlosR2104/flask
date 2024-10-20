@@ -1,8 +1,3 @@
-# python.exe -m venv .venv
-# cd .venv/Scripts
-# activate.bat
-# py -m ensurepip --upgrade
-
 from flask import Flask
 
 from flask import render_template
