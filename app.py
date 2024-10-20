@@ -3,7 +3,7 @@ import mysql.connector
 import datetime
 import pytz
 
-# Conexión a la base de datos
+# Configuración de la conexión a la base de datos
 con = mysql.connector.connect(
     host="185.232.14.52",
     database="u760464709_tst_sep",
@@ -13,68 +13,108 @@ con = mysql.connector.connect(
 
 app = Flask(__name__)
 
-# Ruta para mostrar la página principal
+# Ruta principal
 @app.route("/")
 def index():
-    return render_template("alumnos.html")
+    con.close()
+    return render_template("app.html")
 
-# Ruta para buscar alumnos
-@app.route("/alumnos/buscar")
-def buscar_alumnos():
+# Ruta para insertar o actualizar reservas
+@app.route("/guardar", methods=["POST"])
+def guardar():
+    if not con.is_connected():
+        con.reconnect()
+
+    id_reserva     = request.form["id_reserva"]  # Campo ID de la reserva
+    nombre_apellido = request.form["nombre_apellido"]  # Campo Nombre y Apellido
+    telefono        = request.form["telefono"]  # Campo Teléfono
+    fecha           = request.form["fecha"]  # Campo Fecha (debería ser formato YYYY-MM-DD)
+    
+    cursor = con.cursor()
+
+    if id_reserva:  # Si el ID existe, actualiza la reserva
+        sql = """
+        UPDATE tst0_reservas SET
+        Nombre_Apellido = %s,
+        Telefono = %s,
+        Fecha = %s
+        WHERE Id_Reserva = %s
+        """
+        val = (nombre_apellido, telefono, fecha, id_reserva)
+    else:  # Si el ID no existe, inserta una nueva reserva
+        sql = """
+        INSERT INTO tst0_reservas (Nombre_Apellido, Telefono, Fecha)
+        VALUES (%s, %s, %s)
+        """
+        val = (nombre_apellido, telefono, fecha)
+    
+    cursor.execute(sql, val)
+    con.commit()
+    con.close()
+
+    return make_response(jsonify({"success": True}))
+
+# Ruta para buscar reservas recientes
+@app.route("/buscar")
+def buscar():
     if not con.is_connected():
         con.reconnect()
 
     cursor = con.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM alumnos ORDER BY matricula DESC")
-    alumnos = cursor.fetchall()
-
+    cursor.execute("""
+    SELECT Id_Reserva, Nombre_Apellido, Telefono, DATE_FORMAT(Fecha, '%d/%m/%Y') AS Fecha
+    FROM tst0_reservas
+    ORDER BY Id_Reserva DESC
+    LIMIT 10 OFFSET 0
+    """)
+    registros = cursor.fetchall()
     con.close()
-    return make_response(jsonify(alumnos))
 
-# Ruta para guardar un nuevo alumno o actualizar uno existente
-@app.route("/alumnos/guardar", methods=["POST"])
-def guardar_alumno():
+    return make_response(jsonify(registros))
+
+# Ruta para editar una reserva existente
+@app.route("/editar", methods=["GET"])
+def editar():
     if not con.is_connected():
         con.reconnect()
 
-    matricula = request.form["matricula"]
-    nombreapellido = request.form["nombreapellido"]
+    id_reserva = request.args["id_reserva"]
+
+    cursor = con.cursor(dictionary=True)
+    sql    = """
+    SELECT Id_Reserva, Nombre_Apellido, Telefono, Fecha 
+    FROM tst0_reservas
+    WHERE Id_Reserva = %s
+    """
+    val    = (id_reserva,)
+
+    cursor.execute(sql, val)
+    registro = cursor.fetchone()
+    con.close()
+
+    return make_response(jsonify(registro))
+
+# Ruta para eliminar una reserva
+@app.route("/eliminar", methods=["POST"])
+def eliminar():
+    if not con.is_connected():
+        con.reconnect()
+
+    id_reserva = request.form["id_reserva"]
 
     cursor = con.cursor()
-
-    if matricula:  # Si existe la matrícula, actualizamos
-        sql = """
-        UPDATE alumnos SET NombreApellido = %s WHERE matricula = %s
-        """
-        val = (nombreapellido, matricula)
-    else:  # Si no, creamos un nuevo registro
-        sql = """
-        INSERT INTO alumnos (matricula, NombreApellido) VALUES (%s, %s)
-        """
-        val = (matricula, nombreapellido)
+    sql    = """
+    DELETE FROM tst0_reservas
+    WHERE Id_Reserva = %s
+    """
+    val    = (id_reserva,)
 
     cursor.execute(sql, val)
     con.commit()
     con.close()
 
-    return make_response(jsonify({"status": "success"}))
+    return make_response(jsonify({"success": True}))
 
-# Ruta para eliminar un alumno
-@app.route("/alumnos/eliminar", methods=["POST"])
-def eliminar_alumno():
-    if not con.is_connected():
-        con.reconnect()
-
-    matricula = request.form["matricula"]
-    cursor = con.cursor()
-    sql = "DELETE FROM alumnos WHERE matricula = %s"
-    cursor.execute(sql, (matricula,))
-    con.commit()
-    con.close()
-
-    return make_response(jsonify({"status": "deleted"}))
-
-# Iniciar la aplicación
 if __name__ == "__main__":
     app.run(debug=True)
 
