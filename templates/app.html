@@ -3,85 +3,158 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRUD Alumnos</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+
+    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+
+    <title>App de Reservas</title>
 </head>
 <body>
     <div class="container">
-        <h1 class="mt-3">Gestión de Alumnos</h1>
-        <form id="frmAlumno" method="post">
-            <input type="hidden" id="matricula" name="matricula">
-            <div class="mb-3">
-                <label for="nombreapellido" class="form-label">Nombre y Apellido</label>
-                <input type="text" id="nombreapellido" name="nombreapellido" class="form-control" required>
-            </div>
-            <button id="guardar" class="btn btn-dark">Guardar</button>
-            <button type="reset" id="cancelar" class="btn btn-link">Cancelar</button>
-        </form>
+      <form id="frmReservas" method="post">
+          <input type="hidden" id="id" name="id">
 
-        <table class="table table-striped mt-3">
-            <thead>
-                <tr>
-                    <th>Matrícula</th>
-                    <th>Nombre y Apellido</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody id="tbodyAlumnos"></tbody>
-        </table>
+          <div class="mb-1">
+              <label for="nombre_apellido">Nombre y Apellido</label>
+              <input type="text" id="nombre_apellido" name="nombre_apellido" class="form-control" required>
+          </div>
+          <div class="mb-1">
+              <label for="telefono">Teléfono</label>
+              <input type="tel" id="telefono" name="telefono" class="form-control" required>
+          </div>
+          <div class="mb-1">
+              <label for="fecha">Fecha</label>
+              <input type="date" id="fecha" name="fecha" class="form-control" required>
+          </div>
+          <div class="mb-1">
+              <button id="guardar" name="guardar" class="btn btn-dark">Guardar</button>
+              <button type="reset" id="cancelar" name="cancelar" class="btn btn-link">Cancelar</button>
+          </div>
+      </form>
+
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Nombre y Apellido</th>
+            <th>Teléfono</th>
+            <th>Fecha</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyReservas"></tbody>
+      </table>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
     <script>
-        function buscarAlumnos() {
-            $.get("/alumnos/buscar", function(respuesta) {
-                $("#tbodyAlumnos").html("");
-                for (var x in respuesta) {
-                    var alumno = respuesta[x];
-                    $("#tbodyAlumnos").append(`<tr>
-                        <td>${alumno.matricula}</td>
-                        <td>${alumno.NombreApellido}</td>
-                        <td>
-                            <button class="btn btn-primary btn-editar" data-id="${alumno.matricula}">Editar</button>
-                            <button class="btn btn-danger btn-eliminar" data-id="${alumno.matricula}">Eliminar</button>
-                        </td>
-                    </tr>`);
-                }
-            });
+        var bootstrapTheme = localStorage.getItem("theme")
+
+        function getPreferredTheme() {
+            if (bootstrapTheme) {
+                return bootstrapTheme
+            }
+
+            return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
         }
 
-        // Guardar y actualizar alumno
-        $("#frmAlumno").submit(function(event) {
-            event.preventDefault();
-            $.post("/alumnos/guardar", $(this).serialize(), function(respuesta) {
-                $("#frmAlumno").get(0).reset();
-                buscarAlumnos();
-            });
-        });
-
-        // Editar alumno
-        $(document).on("click", ".btn-editar", function() {
-            var matricula = $(this).attr("data-id");
-            $.get("/alumnos/buscar", {matricula: matricula}, function(respuesta) {
-                $("#matricula").val(respuesta[0].matricula);
-                $("#nombreapellido").val(respuesta[0].NombreApellido);
-            });
-        });
-
-        // Eliminar alumno
-        $(document).on("click", ".btn-eliminar", function() {
-            var matricula = $(this).attr("data-id");
-            if (confirm("¿Deseas eliminar este alumno?")) {
-                $.post("/alumnos/eliminar", {matricula: matricula}, function(respuesta) {
-                    buscarAlumnos();
-                });
+        function setTheme(theme) {
+            if (theme === "auto" && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+                document.documentElement.setAttribute("data-bs-theme", "dark")
+            } else {
+                document.documentElement.setAttribute("data-bs-theme", ((theme == "auto") ? "light" : theme))
             }
-        });
+        }
 
-        // Inicializar
-        $(document).ready(function() {
-            buscarAlumnos();
-        });
-    </script>
+        function showActiveTheme(theme) {
+            $("[data-bs-theme-value]").removeClass("bg-primary text-white active")
+            $(`[data-bs-theme-value="${theme}"]`).addClass("bg-primary text-white active")
+        }
+
+        $(document).on("click", '[data-bs-theme-value]', function (event) {
+            const theme = this.getAttribute("data-bs-theme-value")
+            localStorage.setItem("theme", theme)
+            setTheme(theme)
+            showActiveTheme(theme)
+        })
+
+        document.addEventListener("DOMContentLoaded", function (event) {
+            setTheme(bootstrapTheme)
+            showActiveTheme(getPreferredTheme())
+        })
+
+        window.addEventListener("load", function (event) {
+            function buscar() {
+                $.get("/buscar", function (respuesta) {
+                    $("#tbodyReservas").html("")
+
+                    for (var x in respuesta) {
+                        var reserva = respuesta[x]
+
+                        $("#tbodyReservas").append(`<tr>
+                            <td>${reserva["Nombre_Apellido"]}</td>
+                            <td>${reserva["Telefono"]}</td>
+                            <td>${reserva["Fecha"]}</td>
+                            <td>
+                                <button class="btn btn-primary btn-editar" data-id="${reserva["Id_Reserva"]}">Editar</button>
+                                <button class="btn btn-danger btn-eliminar" data-id="${reserva["Id_Reserva"]}">Eliminar</button>
+                            </td>
+                        </tr>`)
+                    }
+                })
+            }
+
+            buscar()
+
+            $(document).on("click", ".btn-editar", function (event) {
+                var id = $(this).attr("data-id")
+
+                $.get("/editar", {id: id}, function (respuesta) {
+                    var reserva = respuesta[0]
+
+                    $("#id").val(reserva["Id_Reserva"]).trigger("focus")
+                    $("#nombre_apellido").val(reserva["Nombre_Apellido"])
+                    $("#telefono").val(reserva["Telefono"])
+                    $("#fecha").val(reserva["Fecha"])
+                })
+            })
+            
+            $(document).on("click", ".btn-eliminar", function (event) {
+                if (!confirm("¿Quieres eliminar esta reserva?")) {
+                    return
+                }
+
+                var id = $(this).attr("data-id")
+
+                $.post("/eliminar", {id: id})
+            })
+
+            $("#frmReservas").submit(function (event) {
+                event.preventDefault()
+
+                $.post("/guardar", $(this).serialize(), function (respuesta) {
+                    $("#frmReservas").get(0).reset()
+                    buscar()
+                })
+            })
+
+            Pusher.logToConsole = true
+            
+            var pusher = new Pusher("2df86616075904231311", {
+                cluster: "us2"
+            })
+
+            var channel = pusher.subscribe("canalReservas");
+
+            channel.bind("registroReservas", function (reserva) {
+                buscar()
+            })
+        })
+    </script>    
 </body>
 </html>
