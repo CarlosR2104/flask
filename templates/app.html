@@ -12,6 +12,7 @@
     <div class="container">
         <h1>Guardar Reserva</h1>
         <form id="formReservas">
+            <input type="hidden" id="txtIdReserva" name="txtIdReserva">
             <div class="mb-3">
                 <label for="txtNombreApellido" class="form-label">Nombre y Apellido</label>
                 <input type="text" class="form-control" id="txtNombreApellido" name="txtNombreApellido" required>
@@ -30,6 +31,7 @@
                     <th>Nombre y Apellido</th>
                     <th>Teléfono</th>
                     <th>Fecha</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody id="tbodyReservas"></tbody>
@@ -47,6 +49,10 @@
                             <td>${reserva[1]}</td>
                             <td>${reserva[2]}</td>
                             <td>${reserva[3]}</td>
+                            <td>
+                                <button class="btn btn-warning btn-sm" onclick="editarReserva(${reserva[0]}, '${reserva[1]}', '${reserva[2]}')">Editar</button>
+                                <button class="btn btn-danger btn-sm" onclick="eliminarReserva(${reserva[0]})">Eliminar</button>
+                            </td>
                         </tr>`);
                     });
                 });
@@ -55,15 +61,38 @@
             // Al enviar el formulario
             $("#formReservas").submit(function(event) {
                 event.preventDefault();
-                $.post("/reservas/guardar", $(this).serialize(), function(respuesta) {
+                const idReserva = $("#txtIdReserva").val();
+                const url = idReserva ? "/reservas/actualizar" : "/reservas/guardar";
+                $.post(url, $(this).serialize(), function(respuesta) {
                     alert(respuesta);
                     buscarReservas(); // Actualiza la lista de reservas
-                    
-                    // Limpiar los campos de entrada después de agregar la reserva
-                    $("#txtNombreApellido").val('');
-                    $("#txtTelefono").val('');
+                    limpiarFormulario(); // Limpia el formulario después de guardar/actualizar
                 });
             });
+
+            // Función para editar reserva
+            window.editarReserva = function(id, nombre, telefono) {
+                $("#txtIdReserva").val(id);
+                $("#txtNombreApellido").val(nombre);
+                $("#txtTelefono").val(telefono);
+            };
+
+            // Función para eliminar reserva
+            window.eliminarReserva = function(id) {
+                if (confirm("¿Estás seguro de que quieres eliminar esta reserva?")) {
+                    $.post("/reservas/eliminar", { id_reserva: id }, function(respuesta) {
+                        alert(respuesta);
+                        buscarReservas(); // Actualiza la lista de reservas
+                    });
+                }
+            };
+
+            // Función para limpiar el formulario
+            function limpiarFormulario() {
+                $("#txtIdReserva").val('');
+                $("#txtNombreApellido").val('');
+                $("#txtTelefono").val('');
+            }
 
             // Configurar Pusher
             const pusher = new Pusher('25ef14f3e9a47c712e61', {
