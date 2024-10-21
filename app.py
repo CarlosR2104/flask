@@ -1,121 +1,114 @@
-from flask import Flask, render_template, request, jsonify, make_response
+from flask import Flask, render_template, request, jsonify
 import mysql.connector
-import datetime
-import pytz
 import pusher
-
-con = mysql.connector.connect(
-    host="185.232.14.52",
-    database="u760464709_tst_sep",
-    user="u760464709_tst_sep_usr",
-    password="dJ0CIAFF="
-)
 
 app = Flask(__name__)
 
-# Ruta para la página principal
+def get_db_connection():
+    con = mysql.connector.connect(
+        host="185.232.14.52",
+        database="u760464709_tst_sep",
+        user="u760464709_tst_sep_usr",
+        password="dJ0CIAFF="
+    )
+    return con
+
 @app.route("/")
 def index():
-    con.close()
     return render_template("app.html")
 
-# Ruta para la página de alumnos
-@app.route("/alumnos")
-def alumnos():
-    con.close()
-    return render_template("alumnos.html")
-
-# Ruta para guardar alumnos (puedes ajustar esta función si no es necesaria)
 @app.route("/alumnos/guardar", methods=["POST"])
 def alumnosGuardar():
-    con.close()
-    matricula = request.form["txtMatriculaFA"]
-    nombreapellido = request.form["txtNombreApellidoFA"]
-    return f"Matrícula {matricula} Nombre y Apellido {nombreapellido}"
+    telefono = request.form["tel"]
+    nombre_curso = request.form["ncurso"]
 
-# Código modificado para usar la tabla tst0_reservas
-@app.route("/buscar")
-def buscar():
+    con = get_db_connection()
+
     if not con.is_connected():
         con.reconnect()
-
-    cursor = con.cursor(dictionary=True)
-    cursor.execute("""
-    SELECT Id_Reserva, Nombre_Apellido, Telefono, DATE_FORMAT(Fecha, '%d/%m/%Y') AS Fecha 
-    FROM tst0_reservas
-    ORDER BY Id_Reserva DESC
-    LIMIT 10 OFFSET 0
-    """)
-    registros = cursor.fetchall()
-
-    con.close()
-    return make_response(jsonify(registros))
-
-# Ruta para editar un registro en tst0_reservas
-@app.route("/editar", methods=["GET"])
-def editar():
-    if not con.is_connected():
-        con.reconnect()
-
-    id = request.args["id"]
-
-    cursor = con.cursor(dictionary=True)
-    sql = """
-    SELECT Id_Reserva, Nombre_Apellido, Telefono, Fecha FROM tst0_reservas
-    WHERE Id_Reserva = %s
-    """
-    val = (id,)
-
-    cursor.execute(sql, val)
-    registros = cursor.fetchall()
-    con.close()
-
-    return make_response(jsonify(registros))
-
-# Ruta para guardar o actualizar un registro en tst0_reservas
-@app.route("/guardar", methods=["POST"])
-def guardar():
-    if not con.is_connected():
-        con.reconnect()
-
-    id = request.form.get("id")
-    nombre_apellido = request.form["nombre_apellido"]
-    telefono = request.form["telefono"]
-    fecha = request.form.get("fecha", datetime.datetime.now(pytz.timezone("America/Matamoros")).strftime('%Y-%m-%d'))
 
     cursor = con.cursor()
 
-    if id:
-        # Si el ID existe, actualizamos el registro
-        sql = """
-        UPDATE tst0_reservas SET
-        Nombre_Apellido = %s,
-        Telefono = %s,
-        Fecha = %s
-        WHERE Id_Reserva = %s
-        """
-        val = (nombre_apellido, telefono, fecha, id)
-    else:
-        # Si no hay ID, insertamos un nuevo registro
-        sql = """
-        INSERT INTO tst0_reservas (Nombre_Apellido, Telefono, Fecha)
-                        VALUES (%s,             %s,      %s)
-        """
-        val = (nombre_apellido, telefono, fecha)
-    
+    sql = "INSERT INTO tst0_cursos (Telefono, Nombre_Curso) VALUES (%s, %s)"
+    val = (telefono, nombre_curso)
     cursor.execute(sql, val)
     con.commit()
+
+    cursor.close()
     con.close()
 
-    # Notificación con Pusher
     pusher_client = pusher.Pusher(
-        app_id="1714541",
-        key="3ce64b716f42fee14c9b",
-        secret="dfe422af8d19a7130710",
-        cluster="us2",
+        app_id='1864232',
+        key='ec020425c2206acb32eb',
+        secret='a5091fe74dbda031cda4',
+        cluster='us2',
         ssl=True
     )
+    pusher_client.trigger("conexion", "evento", {"tel": telefono, "ncurso": nombre_curso})
 
-    pusher_client.trigger("canalReservas", "registroReserva", {})
+    return f"Teléfono {telefono} y curso {nombre_curso} guardados correctamente"
 
-    return jsonify({})
+@app.route("/buscar")
+def buscar():
+    con = get_db_connection()
+    if not con.is_connected():
+        con.reconnect()
+
+    cursor = con.cursor()
+    cursor.execute("SELECT * FROM tst0_cursos")
+    registros = cursor.fetchall()
+
+    cursor.close()
+    con.close()
+
+    return jsonify(data=registros)
+
+@app.route("/alumnos/eliminar/<int:id_curso>", methods=["DELETE"])
+def eliminar(id_curso):
+    con = get_db_connection()
+
+    if not con.is_connected():
+        con.reconnect()
+
+    cursor = con.cursor()
+
+    sql = "DELETE FROM tst0_cursos WHERE Id_Curso = %s"
+    val = (id_curso,)
+    cursor.execute(sql, val)
+    con.commit()
+
+    cursor.close()
+    con.close()
+
+    return f"Registro con ID {id_curso} eliminado correctamente"
+
+@app.route("/alumnos/editar/<int:id_curso>", methods=["GET", "POST"])
+def editar(id_curso):
+    con = get_db_connection()
+
+    if request.method == "GET":
+        cursor = con.cursor()
+        cursor.execute("SELECT * FROM tst0_cursos WHERE Id_Curso = %s", (id_curso,))
+        registro = cursor.fetchone()
+        cursor.close()
+        con.close()
+
+        return jsonify(data=registro)
+
+    if request.method == "POST":
+        telefono = request.form["tel"]
+        nombre_curso = request.form["ncurso"]
+
+        cursor = con.cursor()
+        sql = "UPDATE tst0_cursos SET Telefono = %s, Nombre_Curso = %s WHERE Id_Curso = %s"
+        val = (telefono, nombre_curso, id_curso)
+        cursor.execute(sql, val)
+        con.commit()
+
+        cursor.close()
+        con.close()
+
+        return f"Registro con ID {id_curso} actualizado correctamente"
+
+if __name__ == "__main__":
+    app.run(debug=True)
