@@ -10,7 +10,7 @@
 
     <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
 
-    <title>App de Reservas</title>
+    <title>App Reservas</title>
 </head>
 <body>
     <div class="container">
@@ -19,29 +19,28 @@
 
           <div class="mb-1">
               <label for="nombre_apellido">Nombre y Apellido</label>
-              <input type="text" id="nombre_apellido" name="nombre_apellido" class="form-control" required>
+              <input type="text" id="nombre_apellido" name="nombre_apellido" class="form-control">
           </div>
           <div class="mb-1">
               <label for="telefono">Teléfono</label>
-              <input type="tel" id="telefono" name="telefono" class="form-control" required>
+              <input type="text" id="telefono" name="telefono" class="form-control">
           </div>
           <div class="mb-1">
               <label for="fecha">Fecha</label>
-              <input type="date" id="fecha" name="fecha" class="form-control" required>
+              <input type="date" id="fecha" name="fecha" class="form-control">
           </div>
           <div class="mb-1">
               <button id="guardar" name="guardar" class="btn btn-dark">Guardar</button>
               <button type="reset" id="cancelar" name="cancelar" class="btn btn-link">Cancelar</button>
           </div>
       </form>
-
       <table class="table table-sm">
         <thead>
           <tr>
             <th>Nombre y Apellido</th>
             <th>Teléfono</th>
             <th>Fecha</th>
-            <th>Acciones</th>
+            <th></th>
           </tr>
         </thead>
         <tbody id="tbodyReservas"></tbody>
@@ -51,7 +50,19 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-
+    <div class="app-float-button bg-body" style="z-index: 3; position: fixed; bottom: 5px; left: 5px; cursor: pointer;">
+        <ul class="list-group list-group-horizontal">
+            <li class="list-group-item" data-bs-theme-value="light">
+                <i class="bi bi-sun-fill"></i>
+            </li>
+            <li class="list-group-item" data-bs-theme-value="dark">
+                <i class="bi bi-moon-stars-fill"></i>
+            </li>
+            <li class="list-group-item" data-bs-theme-value="auto">
+                <i class="bi bi-circle-half"></i>
+            </li>
+        </ul>
+    </div>
     <script>
         var bootstrapTheme = localStorage.getItem("theme")
 
@@ -59,7 +70,6 @@
             if (bootstrapTheme) {
                 return bootstrapTheme
             }
-
             return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
         }
 
@@ -83,11 +93,19 @@
             showActiveTheme(theme)
         })
 
+        window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function (event) {
+            if (bootstrapTheme !== "light" || bootstrapTheme !== "dark") {
+                setTheme(getPreferredTheme())
+            }
+        })
+
         document.addEventListener("DOMContentLoaded", function (event) {
             setTheme(bootstrapTheme)
             showActiveTheme(getPreferredTheme())
         })
+    </script>
 
+    <script>
         window.addEventListener("load", function (event) {
             function buscar() {
                 $.get("/buscar", function (respuesta) {
@@ -102,7 +120,6 @@
                             <td>${reserva["Fecha"]}</td>
                             <td>
                                 <button class="btn btn-primary btn-editar" data-id="${reserva["Id_Reserva"]}">Editar</button>
-                                <button class="btn btn-danger btn-eliminar" data-id="${reserva["Id_Reserva"]}">Eliminar</button>
                             </td>
                         </tr>`)
                     }
@@ -117,44 +134,41 @@
                 $.get("/editar", {id: id}, function (respuesta) {
                     var reserva = respuesta[0]
 
-                    $("#id").val(reserva["Id_Reserva"]).trigger("focus")
+                    $("#id")
+                    .val(reserva["Id_Reserva"])
+                    .trigger("focus")
+
                     $("#nombre_apellido").val(reserva["Nombre_Apellido"])
                     $("#telefono").val(reserva["Telefono"])
                     $("#fecha").val(reserva["Fecha"])
                 })
             })
             
-            $(document).on("click", ".btn-eliminar", function (event) {
-                if (!confirm("¿Quieres eliminar esta reserva?")) {
-                    return
-                }
-
-                var id = $(this).attr("data-id")
-
-                $.post("/eliminar", {id: id})
-            })
-
-            $("#frmReservas").submit(function (event) {
+            $("#frmReservas")
+            .submit(function (event)  {
                 event.preventDefault()
 
                 $.post("/guardar", $(this).serialize(), function (respuesta) {
                     $("#frmReservas").get(0).reset()
-                    buscar()
                 })
+            })
+            .on("reset", function (event) {
+                $("#id").val("")
             })
 
             Pusher.logToConsole = true
             
-            var pusher = new Pusher("2df86616075904231311", {
+            var pusher = new Pusher("cda1cc599395d699a2af", {
                 cluster: "us2"
             })
 
             var channel = pusher.subscribe("canalReservas");
 
-            channel.bind("registroReservas", function (reserva) {
+            channel.bind("registroReservas", function () {
                 buscar()
             })
         })
     </script>    
 </body>
 </html>
+
