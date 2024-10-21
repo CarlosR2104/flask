@@ -3,121 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-    <title>App</title>
-    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://js.pusher.com/7.0/pusher.min.js"></script>
+    <title>Reservas</title>
 </head>
 <body>
     <div class="container">
-        <form id="formGuardar" class="mb-3">
+        <h1>Guardar Reserva</h1>
+        <form id="formReservas">
             <div class="mb-3">
-                <label for="telefono" class="form-label">Teléfono</label>
-                <input type="text" class="form-control" id="telefono" name="tel" required>
+                <label for="txtNombreApellido" class="form-label">Nombre y Apellido</label>
+                <input type="text" class="form-control" id="txtNombreApellido" name="txtNombreApellido" required>
             </div>
             <div class="mb-3">
-                <label for="nombreCurso" class="form-label">Nombre del Curso</label>
-                <input type="text" class="form-control" id="nombreCurso" name="ncurso" required>
+                <label for="txtTelefono" class="form-label">Teléfono</label>
+                <input type="text" class="form-control" id="txtTelefono" name="txtTelefono" required>
             </div>
-            <button type="submit" class="btn btn-primary">Guardar</button>
+            <button type="submit" class="btn btn-primary">Guardar Reserva</button>
         </form>
 
+        <h2>Lista de Reservas</h2>
         <table class="table table-sm">
             <thead>
                 <tr>
-                    <th>Nombre del Curso</th>
-                    <th>Telefono<th>
-                    <th>Acciones</th>
+                    <th>Nombre y Apellido</th>
+                    <th>Teléfono</th>
+                    <th>Fecha</th>
                 </tr>
             </thead>
-            <tbody id="tbodyLog"></tbody>
+            <tbody id="tbodyReservas"></tbody>
         </table>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-
     <script>
-        function buscar() {
-            $.get("/buscar", function (respuesta) {
-                $("#tbodyLog").html("");  
-
-                var registros = respuesta.data;
-
-                for (var x in registros) {
-                    var registro = registros[x];
-
-                    $("#tbodyLog").append(`<tr>
-                        <td>${registro[1]}</td>
-                        <td>${registro[2]}</td>
-                        <td>
-                            <button class="btn btn-danger" onclick="eliminar(${registro[0]})">Eliminar</button>
-                            <button class="btn btn-warning" onclick="editar(${registro[0]})">Editar</button>
-                        </td>
-                    </tr>`);
-                }
-            });
-        }
-
-        buscar();
-
-        $("#formGuardar").on("submit", function (e) {
-            e.preventDefault();  
-
-            var formData = $(this).serialize();  
-
-            $.post("/alumnos/guardar", formData, function (respuesta) {
-                alert(respuesta);  
-                buscar();  
-            });
-        });
-
-        function eliminar(id_curso) {
-            if (confirm("¿Estás seguro de que deseas eliminar este registro?")) {
-                $.ajax({
-                    url: `/alumnos/eliminar/${id_curso}`,
-                    type: 'DELETE',
-                    success: function (respuesta) {
-                        alert(respuesta);
-                        buscar();  
-                    },
-                    error: function (xhr, status, error) {
-                        alert("Error al eliminar el registro: " + xhr.responseText);
-                    }
-                });
-            }
-        }
-
-        function editar(id_curso) {
-            $.get(`/alumnos/editar/${id_curso}`, function (respuesta) {
-                var registro = respuesta.data;
-
-                $("#nombreCurso").val(registro[1]);  
-                $("#telefono").val(registro[2]);  
-
-                $("#formGuardar").off("submit").on("submit", function (e) {
-                    e.preventDefault();  
-
-                    var formData = $(this).serialize() + `&id_curso=${id_curso}`;  
-
-                    $.post(`/alumnos/editar/${id_curso}`, formData, function (respuesta) {
-                        alert(respuesta);
-                        buscar();  
-                        $("#formGuardar")[0].reset();  
+        $(document).ready(function() {
+            // Función para buscar reservas
+            function buscarReservas() {
+                $.get("/reservas/buscar", function(respuesta) {
+                    $("#tbodyReservas").html("");
+                    respuesta.forEach(function(reserva) {
+                        $("#tbodyReservas").append(`<tr>
+                            <td>${reserva[1]}</td>
+                            <td>${reserva[2]}</td>
+                            <td>${reserva[3]}</td>
+                        </tr>`);
                     });
                 });
+            }
+
+            // Al enviar el formulario
+            $("#formReservas").submit(function(event) {
+                event.preventDefault();
+                $.post("/reservas/guardar", $(this).serialize(), function(respuesta) {
+                    alert(respuesta);
+                    buscarReservas(); // Actualiza la lista de reservas
+                    
+                    // Limpiar los campos de entrada después de agregar la reserva
+                    $("#txtNombreApellido").val('');
+                    $("#txtTelefono").val('');
+                });
             });
-        }
 
-        var pusher = new Pusher('ec020425c2206acb32eb', {
-            cluster: 'us2'
-        });
+            // Configurar Pusher
+            const pusher = new Pusher('25ef14f3e9a47c712e61', {
+                cluster: 'us2'
+            });
 
-        var channel = pusher.subscribe('conexion');
-        channel.bind('evento', function(data) {
-            alert('Nuevo registro agregado: ' + data.tel + ', ' + data.ncurso);
-            buscar();  
+            // Suscribirse al canal
+            const channel = pusher.subscribe('reservas-channel');
+            channel.bind('nueva-reserva', function(data) {
+                alert('Nueva reserva: ' + data.nombre_apellido + ', Teléfono: ' + data.telefono + ', Fecha: ' + data.fecha);
+                buscarReservas(); // Actualiza la lista de reservas al recibir un nuevo evento
+            });
+
+            buscarReservas(); // Cargar reservas al inicio
         });
     </script>
 </body>
 </html>
-
